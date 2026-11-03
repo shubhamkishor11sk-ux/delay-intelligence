@@ -44,3 +44,27 @@ def clean_shipments(raw, medians=None):
         df[c] = df[c].fillna(medians[c])
 
     return df, medians
+
+def build_features(clean, hubs):
+
+    hub_cols=["hub_id","hub_city","region","hub_tier","hub_daily_capacity"]
+
+    # Now we perform left merge:
+    df=clean.merge(hubs[hub_cols],on="hub_id", how="left")
+
+    # finding promised hours from service type(int)
+    df["promised_hours"]=df["service_type"].map(PROMISED_HOURS).astype(int)
+
+    # 1 when payment mode is COD
+    df["is_cod"]=(df["payment_mode"] == "COD").astype(int)
+
+    # checking weekends
+    df["is_weekend"]= (df["dispatch_time"].dt.dayofweek >=5).astype(int)
+
+    # hour of dispatch should be integer
+    df["dispatch_hour"]= df["dispatch_time"].dt.hour.astype(int)
+
+    # natural log of rupee
+    df["log_declared_value"]= np.log(df["declared_value_inr"])
+
+    return df
