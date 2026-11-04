@@ -63,3 +63,30 @@ checks_df = pd.DataFrame({
 })
 checks_df.to_csv("outputs/part_a_checks.csv", index=False)
 print(checks_df)
+
+# # Cutting distance into bins
+df["distance_band"] = pd.cut(
+    df["distance_km"],
+    bins=[0, 200, 400, 600, 2000],
+    labels=["0-200", "201-400", "401-600", "601+"],
+    right=True,
+)
+
+tables = []
+for dim in ["service_type", "hub_tier", "distance_band"]:
+    g = df.groupby(dim, observed=True).agg(
+        shipments=("is_delayed", "size"),
+        delayed=("is_delayed", "sum"),
+        delay_rate=("is_delayed", "mean"),
+        mean_hours=("delivery_hours", "mean"),
+    ).reset_index()
+    g = g.rename(columns={dim: "group"})
+    g.insert(0, "dimension", dim)
+    g["group"] = g["group"].astype(str)
+    tables.append(g)
+
+delay_table = pd.concat(tables, ignore_index=True)
+delay_table["delay_rate"] = delay_table["delay_rate"].round(4)
+delay_table["mean_hours"] = delay_table["mean_hours"].round(4)
+delay_table.to_csv("outputs/part_a_delay_by_group.csv", index=False)
+print(delay_table)
