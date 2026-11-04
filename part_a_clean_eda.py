@@ -90,3 +90,10 @@ delay_table["delay_rate"] = delay_table["delay_rate"].round(4)
 delay_table["mean_hours"] = delay_table["mean_hours"].round(4)
 delay_table.to_csv("outputs/part_a_delay_by_group.csv", index=False)
 print(delay_table)
+
+# Correlation
+
+numeric = df.drop(columns=["distance_band"]).select_dtypes(include="number")
+corr = numeric.corr().round(4)
+corr.to_csv("outputs/part_a_correlations.csv")
+print(corr["delivery_hours"].sort_values(key=abs, ascending=False).head(6))
