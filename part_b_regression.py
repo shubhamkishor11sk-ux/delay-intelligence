@@ -62,8 +62,8 @@ for d in depths:
     tr=scores(y_train, tree.predict(X_train))["RMSE"]
     va=scores(y_val, tree.predict(X_val))["RMSE"]
     depth_rows.append({"max_depth":"unlimited" if d is None else d,
-                       "train_mse": round(tr,4),
-                       "val_mse": round(va,4)})
+                       "train_rmse": round(tr,4),
+                       "val_rmse": round(va,4)})
 
     if va<best_rmse:
         best_rmse, best_depth=va,d
