@@ -34,3 +34,26 @@ All numbers below are copied from `outputs/part_a_delay_by_group.csv`,
    right-skewed, with a mean of INR 1,533.05 well above its median of INR 1,121.50,
    while after the natural log the mean (7.0280) and median (7.0220) are nearly equal,
    so the transformed feature is roughly symmetric.
+
+## Model results (regression)
+
+All numbers come from the `outputs/part_b_*.csv` files.
+
+- **Baseline.** Predicting the training mean gives R² = -0.0160. This means
+  the baseline explains almost none of the variation in delivery hours,
+  so it is the floor every model must beat.
+- **Best model on validation.** Linear regression model won with a validation RMSE of
+  4.5235 hours (R² = 0.9493), so its typical error is about 4.5235 hours.
+- **Decision-tree depth.** Depths [1,2] are high-bias: train RMSE are 11.6334 and 9.3687 and
+  validation RMSE are 13.4244 and 11.1179 are both high with a small gap. Depths [12,None] are
+  high-variance: train RMSE falls to 1.3613 and 0.0000 while validation RMSE is 7.1261 and 7.1532,
+  a gaps of 5.7648 and 7.1532. Depth [6] had the lowest validation RMSE (6.2710).
+- **Learning rate.** 0.10 was best (validation RMSE 4.6340,R² 0.9467). At 0.01 the
+  model learns too slowly in 100 trees and underfits (RMSE 10.7015, R² 0.7160). At 1.0 each
+  tree overshoots the correction and the fit becomes unstable (RMSE 6.1643, R² 0.9058).
+- **Cross-validation.** 5-fold CV gave linear regression mean R² 0.9285 (std 0.0048)
+  and gradient boosting mean R² 0.9392 (std 0.0014). This disagrees with the validation ranking, I
+  would ship gradient boosting model because CV averages over all 1020 training-plus-validation rows 
+  instead of one 180-row split, gradient boosting has higher mean R² and more stable scores across folds and validation RMSE is only about 0.11 hours behind a gap small enough to overcome easily.
+- **Final test score.** Gradient boosting scored RMSE 4.6340 hours on the 180 test 
+  rows, scored once.
