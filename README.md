@@ -161,6 +161,8 @@ separate playbooks.
 | Consistency | The same `clean_shipments` and `build_features` run in training and in `predict_delay.py`; `feature_order.csv` fixes the column order; `impute_values.csv` stores training medians |
 | Monitorability | `new_shipment_actions.csv` records every probability and flag per parcel; delivered outcomes can be joined to it later to track flag rates and recall |
 
+**(b) Quantities to monitor**
+
 | Quantity | Numeric trigger |
 |---|---|
 | Weekly delayed share of delivered parcels | Investigate if it differs by more than 10 percentage points from the historical 0.2317 (outside 0.1317 to 0.3317) for two weeks in a row, outside a sale window |
