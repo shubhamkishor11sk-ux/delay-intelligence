@@ -26,7 +26,7 @@ def scores(y_val,y_pred):
 # Splitting into training and validation data
 
 X_train,X_temp,y_train,y_temp=train_test_split(X,y,test_size=0.3,random_state=42)
-X_test,X_val,y_test,y_val=train_test_split(X_temp,y_temp,test_size=0.5,random_state=42)
+X_val,X_test,y_val,y_test=train_test_split(X_temp,y_temp,test_size=0.5,random_state=42)
 
 # Scaling data
 
@@ -62,8 +62,8 @@ for d in depths:
     tr=scores(y_train, tree.predict(X_train))["RMSE"]
     va=scores(y_val, tree.predict(X_val))["RMSE"]
     depth_rows.append({"max_depth":"unlimited" if d is None else d,
-                       "train_mse": round(tr,4),
-                       "val_mse": round(va,4)})
+                       "train_rmse": round(tr,4),
+                       "val_rmse": round(va,4)})
 
     if va<best_rmse:
         best_rmse, best_depth=va,d
