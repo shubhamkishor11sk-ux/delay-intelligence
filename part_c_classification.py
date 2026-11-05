@@ -8,6 +8,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix,accuracy_score,precision_score,recall_score,f1_score
 from sklearn.feature_selection import SelectKBest,f_classif
+import ast
 
 from src.shipment_prep import FEATURES, NOISE_COLUMNS
 
@@ -162,3 +163,26 @@ tuning_df = pd.DataFrame(tuning_rows, columns=["search", "candidates", "cv_folds
                                                "best_params", "best_cv_accuracy", "val_f1"])
 tuning_df.to_csv("outputs/part_c_tuning.csv", index=False)
 print(tuning_df.to_string(index=False))
+
+# choosing the final configuration:
+
+tuning = pd.read_csv("outputs/part_c_tuning.csv")
+
+# tie-break order: default first, then grid, then randomized
+priority = {"default_forest_same_7_features": 0, "grid_search": 1, "randomized_search": 2}
+tuning["priority"] = tuning["search"].map(priority)
+chosen = tuning.sort_values(["val_f1", "priority"], ascending=[False, True]).iloc[0]
+print("chosen row:", chosen["search"], "val_f1 =", chosen["val_f1"])
+
+# parameters of the chosen row
+if chosen["best_params"] == "defaults":
+    chosen_params = {"n_estimators": 100}         
+else:
+    chosen_params = ast.literal_eval(chosen["best_params"])
+print("chosen parameters:", chosen_params)
+
+final_model = Pipeline([
+    ("selector", SelectKBest(f_classif, k=7)),
+    ("model", RandomForestClassifier(random_state=42, **chosen_params)),
+])
+final_model.fit(X_train, y_train)                 
