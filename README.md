@@ -57,3 +57,37 @@ All numbers come from the `outputs/part_b_*.csv` files.
   instead of one 180-row split, gradient boosting has higher mean R² and more stable scores across folds and validation RMSE is only about 0.02 hours behind a gap   small enough to overcome easily.
 - **Final test score.** Gradient boosting scored RMSE 4.9165 hours on the 180 test 
   rows, scored once.
+
+
+## Model results (classification)
+
+All numbers come from the `outputs/part_c_*.csv` files.
+
+- **Blind baseline.** Predicting "not delayed" for every parcel gives accuracy
+  0.7667 but recall 0 (0 of 42 delayed parcels caught), so it is useless for
+  catching delays even though its accuracy looks high.
+- **Noise columns.** The five bookkeeping columns hold a combined 0.2245 of the
+  forest's importance. Their F-score ranks are [8,12,14,16,17], so all five
+  fall outside the top 7.
+- **Feature count (k).** Validation F1 for k = 5, 7, 10, 12, 17 is 0.6988,0.8333,
+  0.7857.0.8049,0.7848. The value increases till k=7 then decreases,so extra columns
+  add noise. The brief fixes k = 7 which is used from here on.
+- **Tuning.** Grid search reached validation F1 0.7750, randomized search 0.7848
+  and the untuned forest on the same 7 columns 0.8333. Tuning did not beat the
+  untuned forest. With only 180 validation rows (42 delayed), differences of
+  this size are within noise, so tuning on one small validation set is unreliable.
+  The chosen configuration is default_forest_same_7_features.
+- **Alert threshold.** The threshold is 0.5, the highest with validation recall
+  at least 0.80 (recall 0.8333, precision 0.7955). At 0.6 recall falls to 0.7619 
+  while precision rises to 0.8205. Lower thresholds raise more unnecessary calls
+  (9 at the chosen one) but miss fewer delayed parcels, which is the cheaper error.
+- **Test result.** At that threshold the final model scored precision 0.6889,
+  recall 0.7561 and F1 0.7209 on the 180 test rows, catching 31 of 41 delayed
+  parcels. Validation recall was 0.8333. Test recall is lower and falls below the
+  0.80 target, so the validation recall of 0.8333 was somewhat optimistic: the
+  threshold was chosen on validation rows, so its recall there is biased upwards,
+  while the test rows were never used for any choice. The test set has
+  only 41 delayed parcels, so each one moves recall by about 0.024 and the gap
+  (about 0.077, roughly three parcels) is partly sampling noise. I would treat
+  the true recall as somewhere around 0.76 to 0.83 rather than claim 0.80 is
+  guaranteed.
