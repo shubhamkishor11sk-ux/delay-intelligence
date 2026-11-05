@@ -60,3 +60,40 @@ for K in [2, 3, 4, 5]:
 sep_df = pd.DataFrame(sep_rows, columns=["K", "across_over_within", "cluster_sizes"])
 sep_df.to_csv("outputs/part_d_separation.csv", index=False)
 print(sep_df.to_string(index=False))
+
+# Task 4 --> segment names and tier check 
+hubs = pd.read_csv("data/hubs.csv")
+
+# order clusters by the mean delay_rate of their hubs: lowest = Standard, highest = Escalate
+cluster_rate = profile.groupby("cluster")["delay_rate"].mean().sort_values()
+names = ["Standard", "Watch", "Escalate"]
+cluster_to_segment = {c: n for c, n in zip(cluster_rate.index, names)}
+profile["segment"] = profile["cluster"].map(cluster_to_segment)
+
+# hub_segments.csv
+hub_segments = (profile[["hub_id", "segment"]]
+                .merge(hubs[["hub_id", "hub_city", "hub_tier"]], on="hub_id", how="left")
+                .sort_values("hub_id"))
+hub_segments.to_csv("outputs/hub_segments.csv", index=False)
+
+# segment_profile.csv
+seg_profile = profile.groupby("segment").agg(
+    hubs=("hub_id", "size"),
+    mean_delivery_hours=("mean_delivery_hours", "mean"),
+    delay_rate=("delay_rate", "mean"),
+    mean_distance_km=("mean_distance_km", "mean"),
+    mean_n_stops=("mean_n_stops", "mean"),
+).reindex(names).reset_index()
+cols = ["mean_delivery_hours", "delay_rate", "mean_distance_km", "mean_n_stops"]
+seg_profile[cols] = seg_profile[cols].round(4)
+seg_profile.to_csv("outputs/segment_profile.csv", index=False)
+
+# tier_vs_segment_mismatch.csv
+tier_implies = {1: "Standard", 2: "Watch", 3: "Escalate"}
+mismatch = hub_segments[hub_segments["segment"] != hub_segments["hub_tier"].map(tier_implies)]
+mismatch.to_csv("outputs/tier_vs_segment_mismatch.csv", index=False)
+
+print(hub_segments.to_string(index=False))
+print(seg_profile.to_string(index=False))
+print("mismatches:")
+print(mismatch.to_string(index=False))
