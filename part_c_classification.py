@@ -1,6 +1,6 @@
 import numpy as np 
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV,RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
@@ -101,3 +101,64 @@ for k in [5, 7, 10, 12, 17]:
 selectk_df = pd.DataFrame(selectk_rows)
 selectk_df.to_csv("outputs/part_c_selectk.csv", index=False)
 print(selectk_df.to_string(index=False))
+
+
+# tuning on the 7 selected columns
+
+sel7 = SelectKBest(f_classif, k=7).fit(X_train, y_train)
+X_train_7 = sel7.transform(X_train)
+X_val_7 = sel7.transform(X_val)
+print("selected 7:", [f for f, keep in zip(FEATURES, sel7.get_support()) if keep])
+
+param_grid = {
+    "n_estimators": [50, 100, 150],
+    "max_depth": [4, 6, 8],
+    "min_samples_leaf": [1, 5, 10],
+}
+
+# grid search: 27 candidates x 5 folds
+grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=5)
+grid.fit(X_train_7, y_train)
+
+# randomized search: 9 candidates x 5 folds
+random = RandomizedSearchCV(RandomForestClassifier(random_state=42), param_grid,
+                          n_iter=9, cv=5, random_state=42)
+random.fit(X_train_7, y_train)
+
+# untuned forest on the same 7 columns
+default_rf = RandomForestClassifier(n_estimators=100, random_state=42)
+default_rf.fit(X_train_7, y_train)
+
+tuning_rows = [
+    {
+        "search": "grid_search",
+        "candidates": len(grid.cv_results_["params"]),
+        "cv_folds": 5,
+        "total_fits": len(grid.cv_results_["params"]) * 5,
+        "best_params": str(grid.best_params_),
+        "best_cv_accuracy": round(grid.best_score_, 4),
+        "val_f1": round(f1_score(y_val, grid.best_estimator_.predict(X_val_7)), 4),
+    },
+    {
+        "search": "randomized_search",
+        "candidates": len(random.cv_results_["params"]),
+        "cv_folds": 5,
+        "total_fits": len(random.cv_results_["params"]) * 5,
+        "best_params": str(random.best_params_),
+        "best_cv_accuracy": round(random.best_score_, 4),
+        "val_f1": round(f1_score(y_val, random.best_estimator_.predict(X_val_7)), 4),
+    },
+    {
+        "search": "default_forest_same_7_features",
+        "candidates": 1,
+        "cv_folds": 0,
+        "total_fits": 1,
+        "best_params": "defaults",
+        "best_cv_accuracy": "",
+        "val_f1": round(f1_score(y_val, default_rf.predict(X_val_7)), 4),
+    },
+]
+tuning_df = pd.DataFrame(tuning_rows, columns=["search", "candidates", "cv_folds", "total_fits",
+                                               "best_params", "best_cv_accuracy", "val_f1"])
+tuning_df.to_csv("outputs/part_c_tuning.csv", index=False)
+print(tuning_df.to_string(index=False))
