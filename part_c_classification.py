@@ -16,7 +16,7 @@ df=pd.read_csv("data/modelling_table.csv")
 X=df[FEATURES]
 y=df["is_delayed"]
 
-# splitting data
+# Task 1 -->splitting data
 X_train,X_temp,y_train,y_temp=train_test_split(X,y,test_size=0.3,random_state=42,stratify=y)
 
 X_val,X_test,y_val,y_test=train_test_split(X_temp,y_temp,test_size=0.5,random_state=42,stratify=y_temp)
@@ -24,7 +24,7 @@ X_val,X_test,y_val,y_test=train_test_split(X_temp,y_temp,test_size=0.5,random_st
 print("rows :", len(X_train), len(X_val), len(X_test))
 print("delays :", y_train.sum(), y_val.sum(), y_test.sum())
 
-# Blind baseline and three classifiers
+# Task 2 -->Blind baseline and three classifiers
 
 def cls_row(name, y_true, y_pred):
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
@@ -70,7 +70,7 @@ models_df = pd.DataFrame(model_rows,
 models_df.to_csv("outputs/part_c_models.csv", index=False)
 print(models_df.to_string(index=False))
 
-# Which column carry signal?
+# Task 3 -->Which column carry signal?
 
 rf_all = RandomForestClassifier(n_estimators=100, random_state=42)
 rf_all.fit(X_train, y_train)
@@ -104,7 +104,7 @@ selectk_df.to_csv("outputs/part_c_selectk.csv", index=False)
 print(selectk_df.to_string(index=False))
 
 
-# tuning on the 7 selected columns
+# Task 4 -->tuning on the 7 selected columns
 
 sel7 = SelectKBest(f_classif, k=7).fit(X_train, y_train)
 X_train_7 = sel7.transform(X_train)
@@ -164,7 +164,7 @@ tuning_df = pd.DataFrame(tuning_rows, columns=["search", "candidates", "cv_folds
 tuning_df.to_csv("outputs/part_c_tuning.csv", index=False)
 print(tuning_df.to_string(index=False))
 
-# choosing the final configuration:
+# Task 5 -->choosing the final configuration:
 
 tuning = pd.read_csv("outputs/part_c_tuning.csv")
 
@@ -185,4 +185,27 @@ final_model = Pipeline([
     ("selector", SelectKBest(f_classif, k=7)),
     ("model", RandomForestClassifier(random_state=42, **chosen_params)),
 ])
-final_model.fit(X_train, y_train)                 
+final_model.fit(X_train, y_train)
+
+# Task 6 -->alert threshold:
+
+val_proba = final_model.predict_proba(X_val)[:, 1]      
+
+thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]   
+
+thr_rows = []
+for t in thresholds:
+    pred = (val_proba >= t).astype(int)                 
+    row = cls_row("threshold", y_val, pred)
+    row.pop("model")
+    thr_rows.append({"threshold": t, **row})
+
+thr_df = pd.DataFrame(thr_rows, columns=["threshold", "TN", "FP", "FN", "TP",
+                                         "accuracy", "precision", "recall", "f1"])
+thr_df.to_csv("outputs/part_c_thresholds.csv", index=False)
+print(thr_df.to_string(index=False))
+
+# operations rule: highest t with validation recall >= 0.80, else 0.1
+ok = thr_df[thr_df["recall"] >= 0.80]
+alert_threshold = float(ok["threshold"].max()) if len(ok) > 0 else 0.1
+print("alert threshold:", alert_threshold)
