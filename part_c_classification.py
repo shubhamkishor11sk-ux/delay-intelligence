@@ -7,6 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix,accuracy_score,precision_score,recall_score,f1_score
+from sklearn.feature_selection import SelectKBest,f_classif
 
 from src.shipment_prep import FEATURES, NOISE_COLUMNS
 
@@ -67,3 +68,36 @@ models_df = pd.DataFrame(model_rows,
                                   "accuracy", "precision", "recall", "f1"])
 models_df.to_csv("outputs/part_c_models.csv", index=False)
 print(models_df.to_string(index=False))
+
+# Which column carry signal?
+
+rf_all = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_all.fit(X_train, y_train)
+
+# one F-score per column:
+selector = SelectKBest(f_classif, k="all").fit(X_train, y_train)
+
+scores_df = pd.DataFrame({
+    "feature": FEATURES,
+    "f_score": selector.scores_,
+    "rf_importance": rf_all.feature_importances_,
+})
+scores_df["f_rank"] = scores_df["f_score"].rank(ascending=False, method="first").astype(int)
+scores_df["is_noise"] = scores_df["feature"].isin(NOISE_COLUMNS)
+scores_df = scores_df[["feature", "f_score", "f_rank", "rf_importance", "is_noise"]]
+scores_df[["f_score", "rf_importance"]] = scores_df[["f_score", "rf_importance"]].round(4)
+scores_df.to_csv("outputs/part_c_feature_scores.csv", index=False)
+print(scores_df.sort_values("f_rank").to_string(index=False))
+
+# validation F1 for different numbers of selected columns
+selectk_rows = []
+for k in [5, 7, 10, 12, 17]:
+    pipe = Pipeline([
+        ("select", SelectKBest(f_classif, k=k)),
+        ("model", RandomForestClassifier(n_estimators=100, random_state=42)),
+    ])
+    pipe.fit(X_train, y_train)
+    selectk_rows.append({"k": k, "val_f1": round(f1_score(y_val, pipe.predict(X_val)), 4)})
+selectk_df = pd.DataFrame(selectk_rows)
+selectk_df.to_csv("outputs/part_c_selectk.csv", index=False)
+print(selectk_df.to_string(index=False))
