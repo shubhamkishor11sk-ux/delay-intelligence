@@ -209,3 +209,30 @@ print(thr_df.to_string(index=False))
 ok = thr_df[thr_df["recall"] >= 0.80]
 alert_threshold = float(ok["threshold"].max()) if len(ok) > 0 else 0.1
 print("alert threshold:", alert_threshold)
+
+# Task 7 --> one test evaluation and final config 
+
+test_proba = final_model.predict_proba(X_test)[:, 1]
+test_pred = (test_proba >= alert_threshold).astype(int)
+
+test_row = cls_row("final", y_test, test_pred)
+test_row.pop("model")
+test_df = pd.DataFrame([{"threshold": alert_threshold, **test_row}],
+                       columns=["threshold", "TN", "FP", "FN", "TP",
+                                "accuracy", "precision", "recall", "f1"])
+test_df.to_csv("outputs/part_c_final_test.csv", index=False)
+print(test_df.to_string(index=False))
+
+# final configuration, read back from the fitted pipeline
+rf_final = final_model.named_steps["model"]
+config_df = pd.DataFrame([{
+    "selector_k": final_model.named_steps["selector"].k,
+    "n_estimators": rf_final.n_estimators,
+    "max_depth": "unlimited" if rf_final.max_depth is None else rf_final.max_depth,
+    "min_samples_leaf": rf_final.min_samples_leaf,
+    "threshold": alert_threshold,
+    "chosen_from": chosen["search"],
+}], columns=["selector_k", "n_estimators", "max_depth", "min_samples_leaf",
+             "threshold", "chosen_from"])
+config_df.to_csv("outputs/part_c_final_config.csv", index=False)
+print(config_df.to_string(index=False))
